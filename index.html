@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Valentine?</title>
+  <style>
+    :root{
+      --bg1:#fff0f6;
+      --bg2:#ffe3ec;
+      --card:#ffffffcc;
+      --text:#2b2b2b;
+      --yes:#ff4d88;
+      --yes2:#ff2d74;
+      --no:#6c757d;
+      --shadow: 0 18px 45px rgba(0,0,0,.12);
+      --radius: 22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100svh;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--text);
+      display:grid;
+      place-items:center;
+      background: radial-gradient(circle at 20% 10%, var(--bg2), transparent 55%),
+                  radial-gradient(circle at 80% 0%, #ffd1dc, transparent 55%),
+                  linear-gradient(180deg, var(--bg1), #fff);
+      overflow:hidden;
+    }
+    .card{
+      width:min(680px, 92vw);
+      background:var(--card);
+      backdrop-filter: blur(10px);
+      border:1px solid rgba(255,255,255,.7);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:28px 22px;
+      text-align:center;
+      position:relative;
+    }
+    h1{
+      margin:0 0 8px;
+      font-size:clamp(26px, 4vw, 40px);
+      letter-spacing:-.02em;
+    }
+    p{
+      margin:8px 0 18px;
+      font-size:clamp(15px, 2.2vw, 18px);
+      line-height:1.4;
+      opacity:.92;
+    }
+    .buttons{
+      display:flex;
+      justify-content:center;
+      gap:14px;
+      flex-wrap:wrap;
+      padding-top:10px;
+      min-height:70px;
+    }
+    button{
+      border:0;
+      padding:14px 18px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:16px;
+      cursor:pointer;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:focus-visible{
+      outline:3px solid rgba(255,77,136,.35);
+      outline-offset:3px;
+    }
+    #yesBtn{
+      background:linear-gradient(180deg, var(--yes), var(--yes2));
+      color:white;
+      box-shadow:0 10px 25px rgba(255,45,116,.25);
+    }
+    #yesBtn:hover{ transform: translateY(-2px) scale(1.02); }
+    #noBtn{
+      background:#eef1f4;
+      color:#4a4a4a;
+      box-shadow:0 10px 25px rgba(0,0,0,.08);
+      position:relative;
+    }
+    #noBtn:hover{ transform: translateY(-1px); }
+
+    .fade{
+      animation: fade .35s ease both;
+    }
+    @keyframes fade{
+      from{ opacity:0; transform: translateY(8px); }
+      to{ opacity:1; transform: translateY(0); }
+    }
+
+    /* confetti */
+    .confetti{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:999;
+    }
+    .confetti span{
+      position:absolute;
+      top:-10px;
+      width:10px;
+      height:16px;
+      border-radius:3px;
+      opacity:.9;
+      animation: fall linear forwards;
+      transform: rotate(0deg);
+    }
+    @keyframes fall{
+      to{ transform: translateY(110svh) rotate(720deg); opacity:1; }
+    }
+
+    .small{
+      font-size:13px;
+      opacity:.7;
+      margin-top:14px;
+    }
+    .reasons{
+      display:grid;
+      gap:10px;
+      margin:14px auto 0;
+      width:min(520px, 94%);
+      text-align:left;
+    }
+    .chip{
+      background:white;
+      border:1px solid rgba(0,0,0,.06);
+      padding:10px 12px;
+      border-radius:14px;
+      box-shadow:0 8px 20px rgba(0,0,0,.06);
+    }
+  </style>
+</head>
+<body>
+  <main class="card fade" id="card" aria-live="polite">
+    <h1 id="title">Will you be my Valentine? 💘</h1>
+    <p id="subtitle">I'm offering premium vibes, emotional support, and unlimited "what do you want to eat?" consultations.</p>
+
+    <div class="buttons" id="btnRow">
+      <button id="yesBtn" aria-label="Yes">Yes 💖</button>
+      <button id="noBtn" aria-label="No">No 🙃</button>
+    </div>
+
+    <div class="small" id="hint">Tip: choose wisely. (This website is definitely unbiased.)</div>
+  </main>
+
+  <div class="confetti" id="confetti" hidden></div>
+
+  <script>
+    /**************
+     * Personalize *
+     **************/
+    const GIRLFRIEND_NAME = "Rautha"; // e.g. "Amara"
+    const OPENING_LINE = GIRLFRIEND_NAME
+      ? `Hey ${GIRLFRIEND_NAME}… will you be my Valentine? 💘`
+      : "Will you be my Valentine? 💘";
+
+    const SUCCESS_TITLE = "Yessss! 🥰💖";
+    const SUCCESS_TEXT  = "Best Decision of The Year. Screenshot this and send it to me 😌";
+    const REASONS = [
+      "I will hype you up like it's my full-time job.",
+      "We love each other regardless.",
+      "We'd look good in Valentine pictures, let's be honest.",
+      "I bring peace, not stress. Mostly.",
+      "I genuinely like you and that's rare these days.",
+      "We deserve soft life and cute dates.",
+      "I'll share my fries. That's real love.",
+      "You're my favorite person (don't let the group chat know)."
+    ];
+
+    /******************
+     * DOM references *
+     ******************/
+    const title = document.getElementById("title");
+    const subtitle = document.getElementById("subtitle");
+    const card = document.getElementById("card");
+    const btnRow = document.getElementById("btnRow");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const hint = document.getElementById("hint");
+    const confetti = document.getElementById("confetti");
+
+    title.textContent = OPENING_LINE;
+
+    /********************
+     * "No" runaway logic
+     ********************/
+    // We move the "No" button by switching it to position: fixed when activated.
+    // That way it can jump anywhere on screen, not just within the card.
+    let noIsFree = false;
+    let chaseAttempts = 0;
+    let reasonIndex = 0;
+    const MAX_ATTEMPTS = 5; // After 5 attempts, they can click it
+
+    function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+    function freeNoButton(){
+      if (noIsFree) return;
+      noIsFree = true;
+      const rect = noBtn.getBoundingClientRect();
+      noBtn.style.position = "fixed";
+      noBtn.style.left = rect.left + "px";
+      noBtn.style.top  = rect.top  + "px";
+      noBtn.style.zIndex = 1000;
+    }
+
+    function moveNoButtonAwayFrom(x, y){
+      // Don't move if they've attempted enough times
+      if (chaseAttempts >= MAX_ATTEMPTS) return;
+      
+      chaseAttempts++;
+      freeNoButton();
+
+      const btnRect = noBtn.getBoundingClientRect();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // Bigger padding to keep button fully visible
+      const pad = 60;
+
+      // pick random position, but try to put it far from the pointer
+      // (several attempts, pick the farthest)
+      let best = {left: btnRect.left, top: btnRect.top, score: -1};
+
+      for (let i=0; i<10; i++){
+        const left = Math.random() * (vw - btnRect.width  - pad*2) + pad;
+        const top  = Math.random() * (vh - btnRect.height - pad*2) + pad;
+
+        const cx = left + btnRect.width/2;
+        const cy = top  + btnRect.height/2;
+        const dx = cx - x, dy = cy - y;
+        const score = dx*dx + dy*dy; // squared distance
+
+        if (score > best.score) best = {left, top, score};
+      }
+
+      const finalLeft = clamp(best.left, pad, vw - btnRect.width - pad);
+      const finalTop  = clamp(best.top,  pad, vh - btnRect.height - pad);
+
+      noBtn.style.left = finalLeft + "px";
+      noBtn.style.top  = finalTop  + "px";
+      
+      // Update hint text as they get closer
+      if (chaseAttempts === MAX_ATTEMPTS) {
+        hint.textContent = "Fine... you can click it now. 🙄";
+      } else {
+        hint.textContent = `Attempt ${chaseAttempts}/${MAX_ATTEMPTS}... keep trying! 😏`;
+      }
+    }
+
+    // Desktop: flee when cursor gets close
+    window.addEventListener("mousemove", (e) => {
+      if (chaseAttempts >= MAX_ATTEMPTS) return; // Stop running away
+      
+      const r = noBtn.getBoundingClientRect();
+      const cx = r.left + r.width/2;
+      const cy = r.top + r.height/2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      const dist = Math.hypot(dx, dy);
+
+      // radius threshold: bigger = harder to click
+      if (dist < 110) moveNoButtonAwayFrom(e.clientX, e.clientY);
+    });
+
+    // Mobile/touch: flee on pointerdown/touchstart when trying to press it
+    noBtn.addEventListener("pointerdown", (e) => {
+      if (chaseAttempts >= MAX_ATTEMPTS) return; // Allow click
+      
+      // If they haven't attempted enough, move it away
+      e.preventDefault();
+      moveNoButtonAwayFrom(e.clientX ?? (window.innerWidth/2), e.clientY ?? (window.innerHeight/2));
+    });
+
+    // When they finally click No, show one reason at a time
+    noBtn.addEventListener("click", (e) => {
+      if (chaseAttempts < MAX_ATTEMPTS) {
+        e.preventDefault();
+        return;
+      }
+      
+      e.preventDefault();
+      showNextReason();
+    });
+
+    /*********************
+     * Screen transitions *
+     *********************/
+    let stage = 0;
+
+    function showNextReason(){
+      if (stage >= 2) return; // Already said yes
+      
+      // If we've shown all reasons, show the full list
+      if (reasonIndex >= REASONS.length) {
+        showAllReasons();
+        return;
+      }
+      
+      stage = 1;
+      card.classList.remove("fade");
+      void card.offsetWidth;
+      card.classList.add("fade");
+
+      title.textContent = "No? Really? 😭";
+      subtitle.textContent = REASONS[reasonIndex];
+      
+      reasonIndex++;
+      
+      // Reset the button position and counter
+      chaseAttempts = 0;
+      hint.textContent = `Reason ${reasonIndex}/${REASONS.length}. Try clicking No again... 😏`;
+      
+      // Reset No button to original position
+      if (noIsFree) {
+        noBtn.style.position = "";
+        noBtn.style.left = "";
+        noBtn.style.top = "";
+        noIsFree = false;
+      }
+    }
+
+    function showAllReasons(){
+      stage = 1;
+      card.classList.remove("fade");
+      void card.offsetWidth;
+      card.classList.add("fade");
+
+      title.textContent = "Still saying No? That's suspicious 😭";
+      subtitle.textContent = "Here's the complete list of why you should reconsider:";
+
+      // add reasons list
+      const reasonsWrap = document.createElement("div");
+      reasonsWrap.className = "reasons";
+      reasonsWrap.id = "reasonsWrap";
+
+      REASONS.forEach(t => {
+        const chip = document.createElement("div");
+        chip.className = "chip";
+        chip.textContent = "• " + t;
+        reasonsWrap.appendChild(chip);
+      });
+
+      hint.textContent = "You can still press No... but should you? 🤔";
+      if (!document.getElementById("reasonsWrap")) card.insertBefore(reasonsWrap, hint);
+    }
+
+    yesBtn.addEventListener("click", () => {
+      showSuccess();
+    });
+
+    function showSuccess(){
+      stage = 2;
+      card.classList.remove("fade");
+      void card.offsetWidth;
+      card.classList.add("fade");
+
+      title.textContent = SUCCESS_TITLE;
+      subtitle.textContent = SUCCESS_TEXT;
+
+      // Hide buttons and any reasons
+      btnRow.innerHTML = "";
+      const reasonsWrap = document.getElementById("reasonsWrap");
+      if (reasonsWrap) reasonsWrap.remove();
+
+      hint.textContent = "Happy Valentine's Day 💘";
+
+      popConfetti();
+    }
+
+    /************
+     * Confetti *
+     ************/
+    function popConfetti(){
+      confetti.hidden = false;
+      confetti.innerHTML = "";
+
+      const pieces = 90;
+      const colors = ["#ff4d88","#ffcc00","#7bdff2","#b2f7ef","#f7aef8","#ffd6e0","#caffbf"];
+
+      for (let i=0; i<pieces; i++){
+        const s = document.createElement("span");
+        const size = Math.random()*8 + 6;
+        s.style.width = size + "px";
+        s.style.height = (size * 1.4) + "px";
+        s.style.left = (Math.random()*100) + "vw";
+        s.style.background = colors[Math.floor(Math.random()*colors.length)];
+        s.style.animationDuration = (Math.random()*1.2 + 1.8) + "s";
+        s.style.animationDelay = (Math.random()*0.25) + "s";
+        s.style.opacity = (Math.random()*0.35 + 0.65);
+        confetti.appendChild(s);
+
+        // cleanup each piece after it falls
+        s.addEventListener("animationend", () => s.remove());
+      }
+
+      // auto-hide after a bit
+      setTimeout(() => {
+        confetti.hidden = true;
+        confetti.innerHTML = "";
+      }, 3500);
+    }
+
+    // Keep No button within viewport on resize/orientation changes
+    window.addEventListener("resize", () => {
+      if (!noIsFree) return;
+      const r = noBtn.getBoundingClientRect();
+      const pad = 60; // Bigger padding to keep it fully visible
+      const left = clamp(r.left, pad, window.innerWidth - r.width - pad);
+      const top  = clamp(r.top,  pad, window.innerHeight - r.height - pad);
+      noBtn.style.left = left + "px";
+      noBtn.style.top  = top  + "px";
+    });
+  </script>
+</body>
+</html>
